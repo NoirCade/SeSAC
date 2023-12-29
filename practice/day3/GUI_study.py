@@ -5,7 +5,7 @@ from PIL import Image, ImageTk, ImageEnhance
 class ImageProcessorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("이미지 밝기 조절")
+        self.root.title("이미지 증강 프로그램")
 
         # 초기 윈도우 사이즈 조정
         self.root.geometry("400x300")
