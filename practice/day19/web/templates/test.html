@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko"
+<head>
+    <meta charset="UTF-8">
+    <title>Flask test</title>
+</head>
+<body>
+    <h2>사용자 입력값</h2>
+
+    <form action="/" method="post">
+        <p><label>1월 판매</label></p>
+        <p><input type="text" name="pan1"></p>
+
+        <p><label>2월 판매</label></p>
+        <p><input type="text" name="pan2"></p>
+
+        <p><button type="submit">예측하기</button></p>
+    </form>
+
+    <p>출력 예시</p>
+    {% if price %}
+    <h3>입력값 확인: {{price}}</h3>
+    {% endif %}
+</body>
+</html>
