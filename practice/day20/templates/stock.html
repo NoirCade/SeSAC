@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="\static\css\style_stock.css">
+</head>
+<body>
+    
+    <div>
+        <h1>종목 번호를 선택합니다</h1>
+        <form action="/" method="post">
+            <p> <label> 종목 번호를 입력하고 주식정보보기를 클릭합니다. </label> 
+             <input type="text" name="stock_num" required>
+             <button type="submit"> 주식정보보기 </button> </p>
+        </form>
+    </div>
+
+    <h2>
+        종목정보: {{header}}
+    </h2>
+    <table>
+        <thead>
+            <tr>
+                <th>제공처</th>
+                <th>최종일자</th>
+                <th>목표가</th>
+                <th>직전목표가</th>
+                <th>변동률(%)</th>
+                <th>투자의견</th>
+                <th>직전투자의견</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in datas %}
+                <tr>
+                    <td>{{item['제공처']}}</td>
+                    <td>{{item['최종일자']}}</td>
+                    <td>{{item['목표가']}}</td>
+                    <td>{{item['직전목표가']}}</td>
+                    <td>{{item['변동률(%)']}}</td>
+                    <td>{{item['투자의견']}}</td>
+                    <td>{{item['직전투자의견']}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

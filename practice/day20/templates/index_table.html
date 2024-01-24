@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="\static\css\style.css">
+</head>
+<body>
+    <h1>표 테이블 <button><a href="{{ url_for('index')  }}">Home으로 이동</a></button></h1>
+    <table>
+        <thead>
+            <tr>
+                <th>이름</th>
+                <th>레벨</th>
+                <th>포인트</th>
+                <th>경험치</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in datas %}
+                <tr>
+                    <td>{{item['name']}}</td>
+                    <td>{{item['label']}}</td>
+                    <td>{{item['point']}}</td>
+                    <td>{{item['exp']}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
