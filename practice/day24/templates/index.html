@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en"
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <link rel="stylesheet" href="\static\css\style.css">
+</head>
+<body>
+    <h1>대문 페이지</h1>
+    <ul>
+        {% for item in datas %}
+            <li>
+                <p>이름: {{item['name']}}</p>
+                <p>레벨: {{item['label']}}</p>
+                <p>포인트: {{item['point']}}</p>
+                <p>경험치: {{item['exp']}}</p>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <button><a href="{{ url_for('predict')  }}">Predict 페이지로 이동</a></button>
+</body>
+</html>
