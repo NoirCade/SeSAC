@@ -31,11 +31,13 @@ def preprocess_image(image):
 @app.route('/')
 def index():
   server_image_path = 'static/images/image_input.jpeg'
+
   return render_template('image_input.html', server_image_path=server_image_path)
 
 # 중간 애니메이션 페이지
 @app.route('/next')
 def animate():
+   
    return render_template('animation.html')
 
 # 예측 페이지
@@ -71,12 +73,16 @@ def predict():
                   "prediction": {
                     "Class": class_name[2:],
                     "Confidence Score": str(np.round(confidence_score * 100))[:-2]}}
+        
+        # result값 확인
         print(result)
+
         return jsonify(result)
 
 # 분석 페이지
 @app.route('/report')
 def report():
+   
    return render_template('report.html')
 
 if __name__=="__main__":
