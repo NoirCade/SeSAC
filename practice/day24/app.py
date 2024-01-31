@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify
 import tensorflow as tf
 from PIL import Image
 import numpy as np
@@ -16,11 +16,11 @@ class_names = open(r"C:\Users\bluecom015\Desktop\SeSAC\practice\day24\static\mod
 
 def preprocess_image(image):
     # 이미지 전처리 로직을 추가 (크기 조정, 정규화 등)
-    # 예제로 간단히 이미지 크기를 224x224로 조정하고 정규화합니다.
-    # image = image.resize((224, 224))
-    # image = np.array(image) / 255.0
-    # image = np.expand_dims(image, axis=0)
     image = image.resize((224, 224))
+
+    # 채널 수가 4개라면 알파 채널을 무시하고 RGB로 변환
+    if image.mode == 'RGBA':
+        image = image.convert('RGB')
     image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
     image = (image / 127.5) - 1
 
@@ -33,6 +33,7 @@ def index():
   server_image_path = 'static/images/image_input.jpeg'
   return render_template('image_input.html', server_image_path=server_image_path)
 
+# 중간 애니메이션 페이지
 @app.route('/next')
 def animate():
    return render_template('animation.html')
@@ -52,7 +53,7 @@ def predict():
         # 업로드된 이미지 저장
         upload_folder = r'C:\Users\bluecom015\Desktop\SeSAC\practice\day24\static\uploads'
         file_path = os.path.join(upload_folder, file.filename)
-        # file.save(file_path)
+        file.save(file_path)
 
         image = Image.open(file.stream)
         processed_image = preprocess_image(image)
@@ -63,13 +64,20 @@ def predict():
         class_name = class_names[index]
         confidence_score = predictions[0][index]
 
-        # 예측 결과를 클라이언트로 전송
+        # 예측 결과를 result 변수에 저장하고, 페이지 전환
         # result = {'prediction': predictions.tolist()}
-        result = {"Class": class_name[2:],
-                  "Confidence Score": str(np.round(confidence_score * 100))[:-2]}
-        
-        return redirect(url_for('animate'))
+        result = {"redirect_url": '/next',
+                  "file_name": file.filename,
+                  "prediction": {
+                    "Class": class_name[2:],
+                    "Confidence Score": str(np.round(confidence_score * 100))[:-2]}}
+        print(result)
+        return jsonify(result)
 
+# 분석 페이지
+@app.route('/report')
+def report():
+   return render_template('report.html')
 
 if __name__=="__main__":
   app.run(debug=True)
