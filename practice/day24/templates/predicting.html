@@ -1,0 +1,78 @@
+<!-- templates/result.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결과 페이지</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: black url("{{ image_path }}") no-repeat center center fixed;
+            background-size: contain;
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+            height: 100vh;  /* 화면의 100% 높이를 차지하도록 설정 */
+        }
+
+        #bulb-container {
+            position: relative;
+            text-align: center;
+        }
+
+        #bulb {
+            width: 10%; /* 전구 이미지의 초기 너비 (상대적인 크기로 조절) */
+            height: auto;
+            animation: bulbAnimation 1s infinite;
+            position: absolute;
+            top: calc(30% + 50px);
+            left: 65%;
+            transform: translate(-50%, -50%);
+        }
+
+        @media (min-width: 768px) {
+            /* 화면 너비가 768px 이상일 때 전구 크기 조절 */
+            #bulb {
+                width: 8%;
+                top: calc(20% + 50px); /* 전구의 위치 조절 */
+            }
+        }
+
+        @media (min-width: 1200px) {
+            /* 화면 너비가 1200px 이상일 때 전구 크기 조절 */
+            #bulb {
+                width: 6%;
+                top: calc(15% + 50px); /* 전구의 위치 조절 */
+            }
+        }
+
+        @keyframes bulbAnimation {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 결과 페이지의 내용을 원하는 대로 추가할 수 있습니다. -->
+<div id="bulb-container">
+    <h2>모델이 예측한 결과를 통해 어디로 공이 향할지 예측중...</h2>
+    <p></p>
+    <img id="bulb" src="{{ url_for('static', filename='images/bulb.png') }}" alt="전구 이미지">
+</div>
+
+<script>
+    // 5초(5000밀리초)가 지난 후에 다음 페이지로 이동
+    setTimeout(function() {
+        window.location.href = "{{ url_for('keeperprediction') }}"; // 'next_page'는 다음 페이지의 라우트 이름으로 변경해야 합니다.
+    }, 5000);
+</script>
+
+</body>
+</html>

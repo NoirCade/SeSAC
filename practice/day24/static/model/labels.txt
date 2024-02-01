@@ -1,2 +1,2 @@
-0 3angle gray right
-1 3angle gray left
+0 left
+1 right

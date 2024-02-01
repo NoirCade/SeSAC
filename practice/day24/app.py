@@ -1,17 +1,22 @@
 # app.py
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import tensorflow as tf
 from PIL import Image
 import numpy as np
 import os
 
-global result
 
 #Flask 객체 인스턴스 생성
 app = Flask(__name__)
+# 세션 활성화
+app.secret_key = 'session_secret_keeeeeey'
 # 모델을 불러오거나 초기화
-model = tf.keras.models.load_model(r"C:\Users\bluecom015\Desktop\SeSAC\practice\day24\static\model\keras_model.h5")
-class_names = open(r"C:\Users\bluecom015\Desktop\SeSAC\practice\day24\static\model\labels.txt", "r").readlines()
+model = tf.keras.models.load_model("./static/model/keras_model.h5")
+try:
+    print(model)
+except:
+    print('Model load failed')
+class_names = open("./static/model/labels.txt", "r").readlines()
 
 
 def preprocess_image(image):
@@ -29,19 +34,41 @@ def preprocess_image(image):
 
 # 대문 페이지
 @app.route('/')
-def index():
-  server_image_path = 'static/images/image_input.jpeg'
+def home():
+  return render_template('index.html')
 
-  return render_template('image_input.html', server_image_path=server_image_path)
+
+# 이미지 업로드 페이지
+@app.route('/image_input')
+def image_input():
+#   server_image_path = 'static/images/image_input.jpeg'
+    return render_template('image_input.html')
+
+@app.route('/predict')
+def predicting():
+    # 여기에 결과 페이지에 보여줄 이미지 경로를 전달하는 로직을 추가할 수 있습니다.
+    image_path = url_for('static', filename='images/A_headon_shot_of_the_goalkeeper_in_front_of_the.jpg')
+    return render_template('predicting.html', image_path=image_path)
+
 
 # 중간 애니메이션 페이지
-@app.route('/next')
-def animate():
-   
-   return render_template('animation.html')
+@app.route('/next_page')
+def next_page():
+    return render_template('next_page.html')
 
-# 예측 페이지
-@app.route('/predict', methods=['POST'])
+
+@app.route('/final_page')
+def final_page():
+    return render_template('final_page.html')
+
+
+@app.route('/keeperprediction')
+def keeperprediction():
+    return render_template('keeperprediction.html')
+
+
+# 예측 기능 구현 페이지
+@app.route('/prediction', methods=['POST'])
 def predict():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'})
@@ -53,7 +80,7 @@ def predict():
 
     if file:
         # 업로드된 이미지 저장
-        upload_folder = r'C:\Users\bluecom015\Desktop\SeSAC\practice\day24\static\uploads'
+        upload_folder = './static/uploads'
         file_path = os.path.join(upload_folder, file.filename)
         file.save(file_path)
 
@@ -68,22 +95,32 @@ def predict():
 
         # 예측 결과를 result 변수에 저장하고, 페이지 전환
         # result = {'prediction': predictions.tolist()}
-        result = {"redirect_url": '/next',
-                  "file_name": file.filename,
-                  "prediction": {
-                    "Class": class_name[2:],
-                    "Confidence Score": str(np.round(confidence_score * 100))[:-2]}}
-        
+        result = {
+            "redirect_url": '/predict',
+            "file_name": file.filename,
+            "prediction": {
+                "Class": class_name[2:],
+                "Confidence Score": str(np.round(confidence_score * 100))[:-2]
+            }
+        }
+
         # result값 확인
         print(result)
+        session['result'] = result
 
-        return jsonify(result)
+        return jsonify(session['result'])
+
 
 # 분석 페이지
 @app.route('/report')
 def report():
-   
-   return render_template('report.html')
+   result = session.get('result', {})
+   data = {"file_name": result.get('file_name', ''),
+           "prediction": result.get('prediction', {})}
+   user_image_path = 'static/uploads/' + data['file_name']
+   print(user_image_path)
+   return render_template('report.html', user_image_path=user_image_path, data=data)
+
 
 if __name__=="__main__":
   app.run(debug=True)

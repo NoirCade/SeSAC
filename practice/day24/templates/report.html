@@ -2,24 +2,25 @@
 <html lang="en"
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Your Report</title>
 
-    <link rel="stylesheet" href="\static\css\style.css">
+    <link rel="stylesheet" href="\static\css\report.css">
 </head>
 <body>
-    <h1>대문 페이지</h1>
-    <p></p>
-    <ul>
-        {% for item in datas %}
-            <li>
-                <p>이름: {{item['name']}}</p>
-                <p>레벨: {{item['label']}}</p>
-                <p>포인트: {{item['point']}}</p>
-                <p>경험치: {{item['exp']}}</p>
-            </li>
-        {% endfor %}
-    </ul>
+    <h1>분석 페이지</h1>
+    <div class="container">
+        <div class = "image-container">
+            <img class = "user-image" src="{{ user_image_path }}" alt="user Image">
+        </div>
+        
+        <div class = "prediction-info">
+            <!-- 예측값과 신뢰도를 표시하는 부분 -->
+            <p>예측값: {{  data['prediction']['Class']  }}</p>
+            <p>신뢰도: {{  data['prediction']['Confidence Score']  }}</p>
+        </div>
+    </div>
+    
 
-    <button><a href="{{ url_for('index')  }}">Index 페이지로 이동</a></button>
+    <button><a href="{{ url_for('home')  }}">Home</a></button>
 </body>
 </html>

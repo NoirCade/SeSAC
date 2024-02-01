@@ -1,0 +1,48 @@
+<!-- templates/next_page.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>다음 페이지</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 화면 오버플로우 제어 */
+        }
+
+        #fullscreen-video {
+            width: 100vw; /* 화면의 100% 너비를 차지하도록 설정 */
+            height: 100vh; /* 화면의 100% 높이를 차지하도록 설정 */
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 비디오를 전체 화면에 표시 -->
+<video id="fullscreen-video" src="{{ url_for('static', filename='images/날라오는 공.mp4') }}" alt="Fullscreen Gif"></video>
+
+<script>
+    var video = document.getElementById("fullscreen-video");
+
+    // Debugging: Log the video source to the console
+    console.log("Video Source: ", video.src);
+
+    // 비디오가 재생 완료되었을 때 다음 페이지로 이동
+    video.addEventListener("ended", function() {
+        console.log("Video ended. Navigating to the next page.");
+        window.location.href = "{{ url_for('final_page') }}"; // 'final_page'는 최종 페이지의 라우트 이름으로 변경해야 합니다.
+    });
+
+    // 0.01초(10밀리초) 후에 비디오를 재생
+    setTimeout(function() {
+        console.log("Starting video playback after 0.01 seconds.");
+        video.play();
+    }, 10);
+</script>
+
+</body>
+</html>

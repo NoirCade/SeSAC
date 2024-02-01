@@ -7,18 +7,9 @@
     <link rel="stylesheet" href="\static\css\style.css">
 </head>
 <body>
-    <h1>대문 페이지</h1>
-    <ul>
-        {% for item in datas %}
-            <li>
-                <p>이름: {{item['name']}}</p>
-                <p>레벨: {{item['label']}}</p>
-                <p>포인트: {{item['point']}}</p>
-                <p>경험치: {{item['exp']}}</p>
-            </li>
-        {% endfor %}
-    </ul>
+    <h1>애니메이션 페이지</h1>
 
-    <button><a href="{{ url_for('index')  }}">Index 페이지로 이동</a></button>
+    <button><a href="{{ url_for('home')  }}">Home</a></button>
+    <button><a href="{{ url_for('report')  }}">분석</a></button>
 </body>
 </html>

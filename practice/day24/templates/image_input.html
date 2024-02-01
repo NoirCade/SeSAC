@@ -14,7 +14,7 @@
     </div>
 
     <div>
-        <img src="{{ server_image_path }}" alt="Server Image">
+        <img src="{{ url_for('static', filename='images/image_input.jpeg') }}" alt="Server Image">
     </div>
 
     <!-- <div id="prediction-result" style="margin-top: 20px;"></div> -->
@@ -65,7 +65,7 @@
             var formData = new FormData();
             formData.append('file', file);
 
-            fetch('/predict', {
+            fetch('/prediction', {
                 method: 'POST',
                 body: formData
             })
