@@ -4,17 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Prediction</title>
+    <style>
+        #drop-area{
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+        }
+        .img {
+            width: 100vw;
+            height: auto;
+        }
+    </style>
 </head>
 <body>
     <h1>Image Prediction</h1>
 
-    <div id="drop-area" style="border: 2px dashed #ccc; padding: 20px; text-align: center;">
+    <div id="drop-area">
         <span>당신의 이미지를 올려주세요!</span>
         <input type="file" id="file-input" accept=".jpg, .jpeg, .png" style="display: none;">
     </div>
 
     <div>
-        <img src="{{ url_for('static', filename='images/image_input.jpeg') }}" alt="Server Image">
+        <img class="img" src="{{ url_for('static', filename='images/image_input.jpeg') }}" alt="Server Image">
     </div>
 
     <!-- <div id="prediction-result" style="margin-top: 20px;"></div> -->

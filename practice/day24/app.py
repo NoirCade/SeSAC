@@ -8,16 +8,13 @@ import os
 
 #Flask 객체 인스턴스 생성
 app = Flask(__name__)
+
 # 세션 활성화
 app.secret_key = 'session_secret_keeeeeey'
-# 모델을 불러오거나 초기화
-model = tf.keras.models.load_model("./static/model/keras_model.h5")
-try:
-    print(model)
-except:
-    print('Model load failed')
-class_names = open("./static/model/labels.txt", "r").readlines()
 
+# 모델을 불러오거나 초기화하고 클래스명 받아옴
+model = tf.keras.models.load_model("./static/model/keras_model.h5")
+class_names = open("./static/model/labels.txt", "r").readlines()
 
 def preprocess_image(image):
     # 이미지 전처리 로직을 추가 (크기 조정, 정규화 등)
@@ -26,15 +23,25 @@ def preprocess_image(image):
     # 채널 수가 4개라면 알파 채널을 무시하고 RGB로 변환
     if image.mode == 'RGBA':
         image = image.convert('RGB')
-    image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
-    image = (image / 127.5) - 1
 
-    return image
+    image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
+    # image = (image / 127.5) - 1
+
+    # 이미지를 r,g,b 채널로 나누어 평균값으로 gray 채널 생성
+    image_r, image_g, image_b = image[:,:,:,0], image[:,:,:,1], image[:,:,:,2]
+    gray = np.asarray(((image_r + image_g + image_b)/3))
+
+    # 정규화 후 gray값으로 3채널로 복제
+    norm_gray = (gray / 127.5) - 1
+    gray_3ch = np.asarray([norm_gray, norm_gray, norm_gray], dtype=np.float32).reshape(1, 224,224, 3)
+
+    return gray_3ch
 
 
 # 대문 페이지
 @app.route('/')
 def home():
+  
   return render_template('index.html')
 
 
@@ -43,6 +50,7 @@ def home():
 def image_input():
 #   server_image_path = 'static/images/image_input.jpeg'
     return render_template('image_input.html')
+
 
 @app.route('/predict')
 def predicting():
@@ -66,6 +74,13 @@ def final_page():
 def keeperprediction():
     return render_template('keeperprediction.html')
 
+@app.route('/correct')
+def correct():
+    return render_template('correct.html')
+
+@app.route('/wrong')
+def wrong():
+    return render_template('wrong.html')
 
 # 예측 기능 구현 페이지
 @app.route('/prediction', methods=['POST'])
