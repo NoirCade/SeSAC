@@ -3,6 +3,7 @@ from glob import glob
 import os
 import shutil
 
+# 리사이즈된 데이터셋을 train / val / test 6 : 2 : 2 로 split 진행
 def ttv_split(img_folder_path):
     img_lists = glob(img_folder_path)
     train_imgs, vt_imgs = train_test_split(img_lists, test_size=0.4, random_state=77, shuffle=True)

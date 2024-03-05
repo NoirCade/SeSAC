@@ -3,17 +3,15 @@ import os
 import cv2
 import numpy as np
 
+# 압축되어있는 데이터를 풀고, 기존 2800*1024 사이즈의 데이터를 종횡비 유지한 채로 검은색 패딩을 넣어 640*640으로 리사이즈
 def ext_resize(comp_file, target_width, target_height):
-    # 압축 파일 열기
     with zipfile.ZipFile(comp_file, 'r') as zip_ref:
-        # 압축 해제
         zip_ref.extractall('extracted_images')
 
     # 압축 해제된 이미지들에 대해 조정
     for filename in zip_ref.namelist():
         # 이미지 파일인 경우에만 처리
         if filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.png'):
-            # 이미지 열기
             image = cv2.imread(f'extracted_images/{filename}')
             height, width = image.shape[:2]
             if width / height > target_width / target_height:
