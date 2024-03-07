@@ -1,0 +1,4 @@
+yolov5m
+
+batch 4 / epoch 10 / hyp.no-augmentation
+SGD / lr 0.01
