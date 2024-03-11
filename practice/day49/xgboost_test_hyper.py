@@ -3,6 +3,7 @@ import os
 import pickle
 import xgboost as xgb
 import optuna
+from optuna.visualization import plot_optimization_history, plot_param_importances, plot_contour
 import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -26,10 +27,12 @@ dvalid = xgb.DMatrix(X_test, label=y_test)
 
 def objective(trial):
     param = {
+        # "device": 'cuda',
         "verbosity": 0,
         "objective": "binary:logistic",
         # use exact for small dataset.
         "tree_method": "exact",
+        "num_boost_around": trial.suggest_int("num_boost_around", 100, 1000),
         # defines booster, gblinear for linear functions.
         "booster": trial.suggest_categorical("booster", ["gbtree", "gblinear", "dart"]),
         # L2 regularization weight.
@@ -66,7 +69,7 @@ def objective(trial):
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='maximize')
-    study.optimize(objective, n_trials=100, timeout=600)
+    study.optimize(objective, n_trials=10000, timeout=600)
 
     print('Number of finished trials: ', len(study.trials))
     print('Best trial: ')
@@ -83,6 +86,11 @@ if __name__ == '__main__':
         pickle.dump(best_bst, f)
 
     print("Model saved to: ", model_path)
+
+    opt_path = os.path.join(pathFolder, "optimization_history.png")
+    param_path = os.path.join(pathFolder, "param_importances.png")
+    plot_optimization_history(study, save_file=opt_path)
+    plot_param_importances(study, save_file=param_path)
 
 
 # # 그리드 탐색 객체 초기화
