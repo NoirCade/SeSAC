@@ -45,9 +45,9 @@ class CustomDataset(Dataset):
         return imglike_data, torch.tensor(self.labels[idx], dtype=torch.float32)
 
 
-class TransferResnet18(nn.Module):
+class conv2d_model(nn.Module):
     def __init__(self, tuning_rate):
-        super(TransferResnet18, self).__init__()
+        super(conv2d_model, self).__init__()
         self.trsfRes = models.resnet18(pretrained=True)
         num_ftrs = self.trsfRes.fc.in_features
         self.trsfRes.fc = nn.Identity()

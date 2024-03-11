@@ -119,7 +119,7 @@ if __name__ == '__main__':
                     best_accuracy = test_accuracy
                     best_history = history[-1]
                     best_parameters = {'batch_size': batch_size, 'lr': lr, 'tuning_rate': tuning_rate}
-                    torch.save(model, './best_model.pt')
+                    torch.save(model, './conv2d_transfer_best_model.pt')
 
     print("Best Parameters:", best_parameters)
     print("Best Test Accuracy:", best_accuracy)
