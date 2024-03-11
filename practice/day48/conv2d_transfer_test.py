@@ -28,40 +28,49 @@ X_val, X_test, y_val, y_test = train_test_split(X_tv, y_tv, test_size=0.5, rando
 
 
 class CustomDataset(Dataset):
-    def __init__(self, data, labels):
+    def __init__(self, data, labels, transform=None):
         self.data = data
         self.labels = labels
+        self.transform = transform
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.data[idx]), torch.tensor(self.labels[idx], dtype=torch.float)
+        imglike_data = torch.tensor(self.data[idx], dtype=torch.float32)
+
+        if self.transform:
+            imglike_data = self.transform(imglike_data)
+            
+        return imglike_data, torch.tensor(self.labels[idx], dtype=torch.float32)
 
 
 class TransferResnet18(nn.Module):
-    def __init__(self):
+    def __init__(self, tuning_rate):
         super(TransferResnet18, self).__init__()
         self.trsfRes = models.resnet18(pretrained=True)
         num_ftrs = self.trsfRes.fc.in_features
-        self.output = nn.Linear(num_ftrs, 2)
+        self.trsfRes.fc = nn.Identity()
+        self.output = nn.Linear(num_ftrs, 1)
+
+        num_params = len(list(self.trsfRes.parameters()))
+        layers_to_freeze = int(num_params * tuning_rate)
+
+        for param in list(self.trsfRes.parameters())[:layers_to_freeze]:
+            param.requires_grad = False
 
     def forward(self, x):
         x = self.trsfRes(x)
         x = self.output(x)
-        return torch.softmax(x)
+        x = torch.sigmoid(x)
+        return x
     
 
-class make_imagelike():
-    def __init__(self, data, target_size):
-        self.data = data
-        self.target_size = target_size
-
-    def make_imglike(self, data, target_size):
-        row = math.ceil(target_size/len(data))
-        imglike_row = np.tile(data, row)[:target_size]
-        imglike = np.tile(imglike_row, (target_size, 1))
-        return imglike
+def make_imglike(data, target_size):
+    row = math.ceil(target_size/len(data))
+    imglike_row = np.tile(data, row)[:target_size]
+    imglike = np.tile(imglike_row, (3, target_size, 1))
+    return imglike
 
 
 if __name__ == '__main__':
@@ -69,43 +78,49 @@ if __name__ == '__main__':
 
     parameters = { 
         'batch_size': [16, 32, 64],
-        'target_size': [32, 64, 128],
-        'lr': [0.001, 0.005, 0.01],
-        'tuning_rate': [0.5, 0.7, 0.9]
+        'lr': [0.001, 0.002, 0.003],
+        'tuning_rate': [0.6, 0.7, 0.8]
     }
 
+    best_accuracy = 0.0
+    best_parameters = {}
 
     for batch_size in parameters['batch_size']:
-        for hidden_size in parameters['target_size']:
-            for lr in parameters['lr']:
-                for tuning_rage in parameters['tuning_rate']:
-                    transforms = transforms.Compose([
-                        make_imagelike()
-                    ])
-                    train_dataset = CustomDataset(X_train, y_train)
-                    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        for lr in parameters['lr']:
+            for tuning_rate in parameters['tuning_rate']:
+                transform = transforms.Compose([
+                    lambda x: make_imglike(x, target_size=32)
+                ])
 
-                    test_dataset = CustomDataset(X_test, y_test)
-                    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+                train_dataset = CustomDataset(X_train, y_train, transform=transform)
+                train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-                    model = TransferResnet18()
-                    optimizer = optim.Adam(model.parameters(), lr=lr)
-                    criterion = nn.CrossEntropyLoss()
+                val_dataset = CustomDataset(X_val, y_val, transform=transform)
+                val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
-                    trial = Trial(model, optimizer, criterion, metrics=['loss', 'accuracy']).to(device)
-                    trial.with_generators(train_loader)
-                    history = trial.run(epochs=10)
+                test_dataset = CustomDataset(X_test, y_test, transform=transform)
+                test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-                    result = trial.evaluate(data_key=torchbearer.TEST_DATA)
-                    test_accuracy = result['CrossEntropyLoss']
+                model = TransferResnet18(tuning_rate=tuning_rate)
+                optimizer = optim.Adam(model.parameters(), lr=lr)
+                criterion = nn.BCELoss()
 
-                    print(f'Batch Size: {batch_size}, Hidden Size: {hidden_size}, Dropout Prob: {dropout_prob}, Learning Rate: {lr}')
-                    print(history[-1])
+                trial = Trial(model, optimizer, criterion, metrics=['loss', 'accuracy']).to(device)
+                trial.with_generators(train_generator=train_loader, val_generator=val_loader, test_generator=test_loader)
+                history = trial.run(epochs=30)
 
-                    if test_accuracy > best_accuracy:
-                        best_accuracy = test_accuracy
-                        best_history = history[-1]
-                        best_parameters = {'batch_size': batch_size, 'hidden_size': hidden_size, 'dropout_prob': dropout_prob, 'lr': lr}    
+                result = trial.evaluate(data_key=torchbearer.TEST_DATA)
+                test_accuracy = result['test_binary_acc']
+
+                print(f'Batch Size: {batch_size}, Learning Rate: {lr}, Tuning Rate: {tuning_rate}')
+                print(history[-1])
+
+                if test_accuracy > best_accuracy:
+                    best_accuracy = test_accuracy
+                    best_history = history[-1]
+                    best_parameters = {'batch_size': batch_size, 'lr': lr, 'tuning_rate': tuning_rate}
+                    torch.save(model, './best_model.pt')
+
     print("Best Parameters:", best_parameters)
     print("Best Test Accuracy:", best_accuracy)
     print("Best Performance history", best_history)
