@@ -64,7 +64,26 @@ class TransferResnet18(nn.Module):
         x = self.output(x)
         x = torch.sigmoid(x)
         return x
-    
+
+class TransferAlexnet(nn.Module):
+    def __init__(self, tuning_rate):
+        super(TransferAlexnet, self).__init__()
+        self.trsfAlex = models.alexnet(pretrained=True)
+        num_ftrs = self.trsfAlex.fc.in_features
+        self.trsfAlex.fc = nn.Identity()
+        self.output = nn.Linear(num_ftrs, 1)
+
+        num_params = len(list(self.trsfRes.parameters()))
+        layers_to_freeze = int(num_params * tuning_rate)
+
+        for param in list(self.trsfRes.parameters())[:layers_to_freeze]:
+            param.requires_grad = False
+
+    def forward(self, x):
+        x = self.trsfRes(x)
+        x = self.output(x)
+        x = torch.sigmoid(x)
+        return x    
 
 def make_imglike(data, target_size):
     row = math.ceil(target_size/len(data))
@@ -101,7 +120,7 @@ if __name__ == '__main__':
                 test_dataset = CustomDataset(X_test, y_test, transform=transform)
                 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-                model = TransferResnet18(tuning_rate=tuning_rate)
+                model = TransferAlexnet(tuning_rate=tuning_rate)
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 criterion = nn.BCELoss()
 
@@ -119,7 +138,7 @@ if __name__ == '__main__':
                     best_accuracy = test_accuracy
                     best_history = history[-1]
                     best_parameters = {'batch_size': batch_size, 'lr': lr, 'tuning_rate': tuning_rate}
-                    torch.save(model, './conv2d_transfer_best_model.pt')
+                    torch.save(model, './conv2d_Alexnet_best_model.pt')
 
     print("Best Parameters:", best_parameters)
     print("Best Test Accuracy:", best_accuracy)
