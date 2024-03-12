@@ -29,6 +29,8 @@ with open(pathFolder+xTrainName,'rb') as f1:
 with open(pathFolder+yTrainName,'rb') as f2:
     y = pickle.load(f2)
 
+X = (X*2) -1
+
 X_train, X_tv, y_train, y_tv = train_test_split(X, y, test_size=0.2, random_state=42)
 X_val, X_test, y_val, y_test = train_test_split(X_tv, y_tv, test_size=0.5, random_state=42)
 
@@ -68,10 +70,10 @@ class BinaryClassificationModel(nn.Module):
         return torch.sigmoid(x)
     
 def objective(trial):
-    batch_size = trial.suggest_categorical('batch_size', [4, 8, 16])
-    hidden_size = trial.suggest_categorical('hidden_size', [16, 32, 64])
-    dropout_prob = trial.suggest_float('dropout_prob', 1e-2, 1e-1)
-    lr = trial.suggest_float('lr', 1e-2, 1e-1)
+    batch_size = trial.suggest_categorical('batch_size', [8, 16, 32])
+    hidden_size = trial.suggest_categorical('hidden_size', [4, 8, 16])
+    dropout_prob = trial.suggest_float('dropout_prob', 1e-2, 1, log=True)
+    lr = trial.suggest_float('lr', 1e-3, 1, log=True)
 
     train_dataset = CustomDataset(X_train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -82,7 +84,7 @@ def objective(trial):
     test_dataset = CustomDataset(X_test, y_test)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    model = BinaryClassificationModel(input_size = 4, hidden_size=hidden_size, dropout_prob=dropout_prob)
+    model = BinaryClassificationModel(input_size = 4, hidden_size=hidden_size, dropout_prob=dropout_prob).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     criterion = nn.BCELoss()
 
@@ -100,7 +102,7 @@ if __name__ == '__main__':
     device = ('cuda' if torch.cuda.is_available() else 'cpu')
 
     storage_dir = '../day47/train/spaceship/optuna'
-    study = optuna.create_study(pruner=MedianPruner(), direction='maximize', study_name="fc_tuning", storage=f'sqlite:///{storage_dir}/fc.db')
+    study = optuna.create_study(pruner=MedianPruner(), direction='maximize')    #, study_name="fc_norm_tuning2", storage=f'sqlite:///{storage_dir}/fc2.db'
     study.optimize(objective, n_trials=100)
 
     print('Number of finished trials: ', len(study.trials))
@@ -112,12 +114,12 @@ if __name__ == '__main__':
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
 
-    model = BinaryClassificationModel(input_size = 4, hidden_size=trial.params['hidden_size'], dropout_prob=trial.params['dropout_prob'])
+    model = BinaryClassificationModel(input_size = 4, hidden_size=trial.params['hidden_size'], dropout_prob=trial.params['dropout_prob']).to(device)
     optimizer = optim.Adam(model.parameters(), lr=trial.params['lr'])
     criterion = nn.BCELoss()
     best_try = Trial(model, optimizer, criterion, metrics=['loss', 'accuracy']).to(device)
 
-    model_path = os.path.join(pathFolder, "fc_best_model.pth")
+    model_path = os.path.join(pathFolder, "fc_norm_best_model2.pth")
     torch.save(model, model_path)
 
     print("Model saved to: ", model_path)

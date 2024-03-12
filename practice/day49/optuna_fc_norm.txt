@@ -1,0 +1,8 @@
+Number of finished trials:  100
+Best trial:
+  Value: 0.7286501526832581
+  Params:
+    batch_size: 16
+    hidden_size: 8
+    dropout_prob: 0.15281651564863355
+    lr: 0.047374991683975826
