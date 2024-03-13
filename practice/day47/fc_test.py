@@ -27,6 +27,8 @@ with open(pathFolder+xTrainName,'rb') as f1:
 with open(pathFolder+yTrainName,'rb') as f2:
     y = pickle.load(f2)
 
+X = np.array((X*2) -1)
+
 X_train, X_tv, y_train, y_tv = train_test_split(X, y, test_size=0.2, random_state=42)
 X_val, X_test, y_val, y_test = train_test_split(X_tv, y_tv, test_size=0.5, random_state=42)
 
@@ -44,23 +46,20 @@ class CustomDataset(Dataset):
 
 
 class BinaryClassificationModel(nn.Module):
-    def __init__(self, input_size, hidden_size, dropout_prob):
+    def __init__(self, input_size, hidden_size):
         super(BinaryClassificationModel, self).__init__()
         self.linear = nn.Linear(input_size, hidden_size)  # 선형 레이어
         self.hidden = nn.Linear(hidden_size, hidden_size)   # 중간 레이어
         self.batch_norm = nn.BatchNorm1d(hidden_size)  # 배치 정규화 레이어
-        self.dropout = nn.Dropout(dropout_prob)  # 드롭아웃 레이어
         self.output = nn.Linear(hidden_size, 1)  # 출력 레이어
 
     def forward(self, x):
         x = self.linear(x)
         x = self.batch_norm(x)
         x = torch.relu(x)
-        x = self.dropout(x)
         x = self.hidden(x)
         x = self.batch_norm(x)
         x = torch.relu(x)
-        x = self.dropout(x)
         x = self.output(x)
 
         return torch.sigmoid(x)
@@ -70,10 +69,9 @@ if __name__ == '__main__':
     device = ('cuda' if torch.cuda.is_available() else 'cpu')
 
     parameters = { 
-        'batch_size': [4, 8, 16],
-        'hidden_size': [16, 32, 64],
-        'dropout_prob': [0.03, 0.05, 0.07],
-        'lr': [0.01, 0.02, 0.03]
+        'batch_size': [4, 8, 16, 32, 64],
+        'hidden_size': [8, 16, 32, 64],
+        'lr': [0.0005, 0.0003, 0.0001]
     }
 
     best_accuracy = 0.0
@@ -81,37 +79,36 @@ if __name__ == '__main__':
 
     for batch_size in parameters['batch_size']:
         for hidden_size in parameters['hidden_size']:
-            for dropout_prob in parameters['dropout_prob']:
-                for lr in parameters['lr']:
+            for lr in parameters['lr']:
 
-                    train_dataset = CustomDataset(X_train, y_train)
-                    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+                train_dataset = CustomDataset(X_train, y_train)
+                train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-                    val_dataset = CustomDataset(X_val, y_val)
-                    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+                val_dataset = CustomDataset(X_val, y_val)
+                val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
-                    test_dataset = CustomDataset(X_test, y_test)
-                    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+                test_dataset = CustomDataset(X_test, y_test)
+                test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-                    model = BinaryClassificationModel(input_size = 4, hidden_size=hidden_size, dropout_prob=dropout_prob)
-                    optimizer = optim.Adam(model.parameters(), lr=lr)
-                    criterion = nn.BCELoss()
+                model = BinaryClassificationModel(input_size = 4, hidden_size=hidden_size)
+                optimizer = optim.Adam(model.parameters(), lr=lr)
+                criterion = nn.BCELoss()
 
-                    trial = Trial(model, optimizer, criterion, metrics=['loss', 'accuracy']).to(device)
-                    trial.with_generators(train_loader, val_generator=val_loader, test_generator=test_loader)
-                    history = trial.run(epochs=30)
+                trial = Trial(model, optimizer, criterion, metrics=['loss', 'accuracy']).to(device)
+                trial.with_generators(train_loader, val_generator=val_loader, test_generator=test_loader)
+                history = trial.run(epochs=100)
 
-                    result = trial.evaluate(data_key=torchbearer.TEST_DATA)
-                    test_accuracy = result['test_binary_acc']
+                result = trial.evaluate(data_key=torchbearer.TEST_DATA)
+                test_accuracy = result['test_binary_acc']
 
-                    print(f'Batch Size: {batch_size}, Hidden Size: {hidden_size}, Dropout Prob: {dropout_prob}, Learning Rate: {lr}')
-                    print(history[-1])
+                print(f'Batch Size: {batch_size}, Hidden Size: {hidden_size}, Learning Rate: {lr}')
+                print(history[-1])
 
-                    if test_accuracy > best_accuracy:
-                        best_accuracy = test_accuracy
-                        best_history = history[-1]
-                        best_parameters = {'batch_size': batch_size, 'hidden_size': hidden_size, 'dropout_prob': dropout_prob, 'lr': lr}
-                        torch.save(model, './fc_best_model.pt')
+                if test_accuracy > best_accuracy:
+                    best_accuracy = test_accuracy
+                    best_history = history[-1]
+                    best_parameters = {'batch_size': batch_size, 'hidden_size': hidden_size, 'lr': lr}
+                    torch.save(model, './fc_best_model2.pt')
 
 
     print("Best Parameters:", best_parameters)
