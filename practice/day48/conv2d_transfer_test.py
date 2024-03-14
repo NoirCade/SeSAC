@@ -51,7 +51,7 @@ class CustomDataset(Dataset):
 class TransferResnet18(nn.Module):
     def __init__(self, tuning_rate):
         super(TransferResnet18, self).__init__()
-        self.trsfRes = models.resnet18(pretrained=True)
+        self.trsfRes = models.resnet18(pretrained=False)
         num_ftrs = self.trsfRes.fc.in_features
         self.trsfRes.fc = nn.Identity()
         self.output = nn.Linear(num_ftrs, 1)
@@ -100,8 +100,8 @@ def make_imglike(data, target_size):
 if __name__ == '__main__':
     parameters = { 
         'batch_size': [16, 32, 64],
-        'lr': [0.001, 0.002, 0.003],
-        'tuning_rate': [0.6, 0.7, 0.8]
+        'lr': [0.0005, 0.0007, 0.001, 0.003],
+        'tuning_rate': [1]
     }
 
     best_accuracy = 0.0
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
                 trial = Trial(model, optimizer, criterion, metrics=['loss', 'accuracy']).to(device)
                 trial.with_generators(train_generator=train_loader, val_generator=val_loader, test_generator=test_loader)
-                history = trial.run(epochs=10)
+                history = trial.run(epochs=20)
 
                 result = trial.evaluate(data_key=torchbearer.TEST_DATA)
                 test_accuracy = result['test_binary_acc']
@@ -141,7 +141,7 @@ if __name__ == '__main__':
                     best_accuracy = test_accuracy
                     best_history = history[-1]
                     best_parameters = {'batch_size': batch_size, 'lr': lr, 'tuning_rate': tuning_rate}
-                    torch.save(model, './test.pt')
+                    torch.save(model, './conv2d_Resnet18_no_weight_best.pt')
 
     print("Best Parameters:", best_parameters)
     print("Best Test Accuracy:", best_accuracy)

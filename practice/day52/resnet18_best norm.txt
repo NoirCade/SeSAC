@@ -1,0 +1,3 @@
+Best Parameters: {'batch_size': 16, 'lr': 0.002, 'tuning_rate': 0.6}
+Best Test Accuracy: 0.7300275564193726
+Best Performance history {'running_loss': 0.5576192736625671, 'running_binary_acc': 0.7475000023841858, 'loss': 0.5679711103439331, 'binary_acc': 0.7363793253898621, 'val_loss': 0.5461242198944092, 'val_binary_acc': 0.753103494644165, 'train_steps': 363, 'validation_steps': 46, 'test_loss': 0.5736621618270874, 'test_binary_acc': 0.7300275564193726}
