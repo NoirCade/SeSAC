@@ -24,3 +24,6 @@ practice/day44/extracted_images/
 practice/day44/resized_woods/
 practice/day44/resized_woods.zip
 practice/day48/conv2d_Alexnet_best_model.pt
+practice/day52/earthquake/xTrain.pkl
+practice/day52/earthquake/xTrain3ch.pkl
+practice/day52/earthquake/yTrain.pkl
