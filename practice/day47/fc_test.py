@@ -10,12 +10,6 @@ from torchbearer import Trial
 import torchbearer
 from sklearn.model_selection import train_test_split
 
-
-'''추후 적용해볼 것들
-    1. BCE - sigmoid 대신 CEL - softmax
-'''
-
-
 pathFolder = "./train/spaceship/"
 os.makedirs(pathFolder,exist_ok=True)
 xTrainName = "XTrain.pkl"
@@ -109,7 +103,6 @@ if __name__ == '__main__':
                     best_history = history[-1]
                     best_parameters = {'batch_size': batch_size, 'hidden_size': hidden_size, 'lr': lr}
                     torch.save(model, './fc_best_model2.pt')
-
 
     print("Best Parameters:", best_parameters)
     print("Best Test Accuracy:", best_accuracy)

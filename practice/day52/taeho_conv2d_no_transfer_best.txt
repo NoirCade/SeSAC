@@ -1,0 +1,10 @@
+parameters = { 
+    'batch_size': [16, 32, 64],
+    'lr': [0.0005, 0.0007, 0.001, 0.003],
+    'tuning_rate': [1]
+}
+Best Parameters: {'batch_size': 32, 'lr': 0.003, 'tuning_rate': 1}
+Best Test Accuracy: 0.7286501526832581
+Best Performance history {'running_loss': 0.6124821305274963, 'running_binary_acc': 0.70374995470047, 'loss': 0.6016374826431274, 'binary_acc': 0.7131034731864929, 'val_loss': 0.5505985021591187, 'val_binary_acc': 0.7544828057289124, 'train_steps': 182, 'validation_steps': 23, 'test_loss': 0.5915658473968506, 'test_binary_acc': 0.7286501526832581}
+
+resnet18 모델의 경우 no transfer와 transfer의 best acc가 동일

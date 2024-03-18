@@ -17,11 +17,10 @@ with open(pathFolder+xTrainName,'rb') as f1:
 with open(pathFolder+yTrainName,'rb') as f2:
     y = pickle.load(f2)
 
-print(type(X),type(y))
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
 dtrain = xgb.DMatrix(X_train, label=y_train)
 dvalid = xgb.DMatrix(X_test, label=y_test)
+
 
 def objective(trial):
     param = {
@@ -65,9 +64,10 @@ def objective(trial):
     accuracy = sklearn.metrics.accuracy_score(y_test, pred_labels)
     return accuracy
 
+
 if __name__ == '__main__':
     storage_dir = '../day47/train/spaceship/optuna'
-    study = optuna.create_study(direction='maximize', study_name="xgb_tuning", storage=f'sqlite:///{storage_dir}/xgb.db')
+    study = optuna.create_study(direction='maximize', study_name="xgb_tuning_final", storage=f'sqlite:///{storage_dir}/xgb.db')
     study.optimize(objective, n_trials=10000)
 
     print('Number of finished trials: ', len(study.trials))
@@ -75,33 +75,14 @@ if __name__ == '__main__':
     trial = study.best_trial
     print("  Value: {}".format(trial.value))
     print("  Params: ")
+
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
 
     best_bst = xgb.train(trial.params, dtrain)
-
     model_path = os.path.join(pathFolder, "xgb_best_model.pth")
+
     with open(model_path, "wb") as f:
         pickle.dump(best_bst, f)
 
     print("Model saved to: ", model_path)
-
-
-# # 그리드 탐색 객체 초기화
-# grid_search = GridSearchCV(xgb_clf, param_grid, cv=3, scoring='accuracy', verbose=10)
-
-# # 그리드 탐색 수행
-# grid_search.fit(X_train, y_train)
-
-# # 최적 하이퍼파라미터 출력
-# print("Best parameters found: ", grid_search.best_params_)
-
-# # 최적 모델로 예측
-# best_model = grid_search.best_estimator_
-# predictions = best_model.predict(X_test)
-
-# # 예측 정확도 평가
-# accuracy = accuracy_score(y_test, predictions)
-# print("Accuracy: %.2f%%" % (accuracy * 100.0))
-
-# best_model.save_model('best_model.xgb')

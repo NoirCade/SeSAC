@@ -1,15 +1,5 @@
 parameters = { 
     'batch_size': [16, 32, 64],
-    'lr': [0.001, 0.003, 0.005, 0.007, 0.009, 0.01, 0.02, 0.03],
-    'tuning_rate': [1]
-}
-Best Parameters: {'batch_size': 32, 'lr': 0.001, 'tuning_rate': 1}
-Best Test Accuracy: 0.7272727489471436
-Best Performance history {'running_loss': 0.5617957711219788, 'running_binary_acc': 0.737500011920929, 'loss': 0.5781347155570984, 'binary_acc': 0.7301724553108215, 'val_loss': 0.5569332242012024, 'val_binary_acc': 0.7544828057289124, 'train_steps': 182, 'validation_steps': 23, 'test_loss': 0.5744264721870422, 'test_binary_acc': 0.7272727489471436}
-
-
-parameters = { 
-    'batch_size': [16, 32, 64],
     'lr': [0.0005, 0.0007, 0.001, 0.003],
     'tuning_rate': [1]
 }
