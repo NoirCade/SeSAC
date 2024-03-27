@@ -31,10 +31,14 @@ class HateSpeechClassifier(nn.Module):
         super(HateSpeechClassifier, self).__init__()
         self.bert = AutoModel.from_pretrained("skt/kobert-base-v1")
         self.classifier = nn.Linear(768, 2)  # KoBERT의 hidden size: 768, 클래스 수: 2
+        self.batch_norm = nn.BatchNorm1d(768)  # Batch normalization layer
+        self.dropout = nn.Dropout(0.1)  # Dropout layer with 0.1 probability
 
     def forward(self, input_ids, attention_mask):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         cls_output = outputs.pooler_output  # CLS 토큰의 출력을 사용
+        cls_output = self.batch_norm(cls_output)
+        cls_output = self.dropout(cls_output)
         logits = self.classifier(cls_output)
         return logits
 
@@ -99,10 +103,10 @@ if __name__ == '__main__':
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True, stratify=y)
 
     train_dataset = HateSpeechDataset(X_train, y_train, tokenizer)
-    train_dataloader = DataLoader(train_dataset, batch_size=16)
+    train_dataloader = DataLoader(train_dataset, batch_size=4)
 
     test_dataset = HateSpeechDataset(X_val, y_val, tokenizer)
-    test_dataloader = DataLoader(test_dataset, batch_size=16)
+    test_dataloader = DataLoader(test_dataset, batch_size=4)
 
     # 모델 인스턴스화 및 옵티마이저 설정
     model = HateSpeechClassifier()
