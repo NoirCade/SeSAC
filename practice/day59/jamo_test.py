@@ -1,4 +1,3 @@
-from transformers import AutoTokenizer, AutoModel
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch import nn, optim
@@ -10,8 +9,6 @@ import numpy as np
 import torch.optim.lr_scheduler as lr_scheduler
 import pickle
 import gzip
-from sklearn.model_selection import train_test_split
-import pandas as pd
 
 
 def korean_to_be_englished(korean_word):
@@ -48,9 +45,11 @@ class TextCNNDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        data = np.transpose(self.data[idx])
+        dat = self.data.iloc[idx]
+        dat = np.array(dat)
         label = self.labels.iloc[idx]
-        return data.astype(np.float32), label
+        return dat.astype('float32'), label
+
 
 class TextCNN(nn.Module):
     def __init__(self):
@@ -58,17 +57,15 @@ class TextCNN(nn.Module):
         self.conv1 = nn.Conv2d(1, 64, (6, 127), padding=(2,0))
         self.conv2 = nn.Conv2d(64, 128, (9, 1), padding=(4,0))
         self.conv3 = nn.Conv2d(128, 256, (12, 1), padding=(6,0))
-        self.fc1 = nn.Linear(370, 128)
+        self.fc1 = nn.Linear(1792, 128)
         self.fc2 = nn.Linear(128, 64)
         self.fc3 = nn.Linear(64, 2)
         self.dropout = nn.Dropout(0.2)
         
     def forward(self, x):
-        print('input == ', x.size())
         x = F.max_pool2d(F.relu(self.conv1(x)), (3, 1))
         x = F.max_pool2d(F.relu(self.conv2(x)), (3, 1))
         x = F.max_pool2d(F.relu(self.conv3(x)), (3, 1))
-        print('conv3 output == ', x.size())
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
         x = self.dropout(x)
@@ -84,6 +81,7 @@ def train(model, dataloader, optimizer, criterion, device):
 
     with tqdm(total=len(dataloader), desc="Training", unit="batch") as t:
         for data, labels in dataloader:
+            data = data.unsqueeze(1)
             data, labels = data.to(device), labels.to(device)
 
             optimizer.zero_grad()
@@ -109,6 +107,7 @@ def evaluate(model, dataloader, criterion, device):
     with torch.no_grad():
         with tqdm(total=len(dataloader), desc="Validation", unit="batch") as t:
             for data, labels in dataloader:
+                data = data.unsqueeze(1)
                 data, labels = data.to(device), labels.to(device)
 
                 outputs = model(data)
@@ -125,46 +124,37 @@ def evaluate(model, dataloader, criterion, device):
     print(f"Validation Loss: {average_loss}, Accuracy: {accuracy}")
     return average_loss, accuracy
 
-if __name__ == '__main__':
-    data = pd.read_csv('../day58/clean_or_dirty_words.csv').drop(columns='Unnamed: 0')
-    y = data['clean']
 
-    with gzip.open('hs.pickle', 'rb') as f:
-        # pickle 파일 로드
-        data = pickle.load(f)
+def trainer(X, y, epochs, batch_size):
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True, stratify=y)
 
-    X_train, X_val, y_train, y_val = train_test_split(data, y, test_size=0.2, random_state=42, shuffle=True, stratify=y)
-
-    train_dataset = TextCNNDataset(X_train, y_train)
-    train_dataloader = DataLoader(train_dataset, batch_size=4)
-
-    test_dataset = TextCNNDataset(X_val, y_val)
-    test_dataloader = DataLoader(test_dataset, batch_size=4)
-
-    # 모델 인스턴스화 및 옵티마이저 설정
-    model = TextCNN()
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
-    criterion = nn.CrossEntropyLoss()
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
-
-    # GPU 사용 설정 (가능한 경우)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    print(device)
-
-    # 학습 파라미터
-    epochs = 10
     best_accuracy = 0.0
     best_model = None
     history = {'train_loss': [], 'val_loss': [], 'val_accuracy': []}
 
     for epoch in range(epochs):
+        train_dataset = TextCNNDataset(X_train, y_train)
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
+
+        val_dataset = TextCNNDataset(X_val, y_val)
+        val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
+
+        # 모델 인스턴스화 및 옵티마이저 설정
+        model = TextCNN()
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        criterion = nn.CrossEntropyLoss()
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+
+        # GPU 사용 설정 (가능한 경우)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+
         print(f"Epoch {epoch+1}/{epochs}")
         print('-' * 20)
 
         train_loss = train(model, train_dataloader, optimizer, criterion, device)
         scheduler.step()
-        val_loss, val_accuracy = evaluate(model, test_dataloader, criterion, device)
+        val_loss, val_accuracy = evaluate(model, val_dataloader, criterion, device)
 
         history['train_loss'].append(train_loss)
         history['val_loss'].append(val_loss)
@@ -173,5 +163,39 @@ if __name__ == '__main__':
         if val_accuracy > best_accuracy:
             best_accuracy = val_accuracy
             best_model = model.state_dict()
-            torch.save(best_model, 'cnn_best_model.pth')
+            torch.save(best_model, f'best_model.pth')
             print('Best model saved!')
+    print('Best model Accuracy == ', best_accuracy)
+
+
+def tester(X, y, model_path):
+    test_dataset = TextCNNDataset(X, y)
+    test_dataloader = DataLoader(test_dataset)
+    model = TextCNN()
+    model.load_state_dict(torch.load(model_path))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    criterion = nn.CrossEntropyLoss()
+
+    test_loss, test_accuracy = evaluate(model, test_dataloader, criterion, device)
+    print('Test loss == ', test_loss, ' Test Accuracy == ', test_accuracy)
+
+
+
+if __name__ == '__main__':
+    with gzip.open('hs4.pickle', 'rb') as f:
+        # pickle 파일 로드
+        data = pickle.load(f)
+
+    X = data['onehot_vector']
+    y = data['clean']
+
+    with gzip.open('hs_val.pickle', 'rb') as f:
+        test_data = pickle.load(f)
+
+    test_X = data['onehot_vector']
+    test_y = data['clean']
+    model = './cnn_best_model_1000epoch.pth'
+
+    # trainer(X, y, 1000, 16)
+    tester(test_X, test_y, model)
