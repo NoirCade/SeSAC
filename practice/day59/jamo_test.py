@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torch import nn, optim
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 import pandas as pd
 from tqdm import tqdm
 import torch.nn.functional as F
@@ -9,31 +10,6 @@ import numpy as np
 import torch.optim.lr_scheduler as lr_scheduler
 import pickle
 import gzip
-
-
-def korean_to_be_englished(korean_word):
-    """
-    한글 단어를 입력받아서 초성/중성/종성을 구분하여 리턴해줍니다. 
-    """
-    ####################################
-    # 초성 리스트. 00 ~ 18
-    CHOSUNG_LIST = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
-    # 중성 리스트. 00 ~ 20
-    JUNGSUNG_LIST = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
-    # 종성 리스트. 00 ~ 27 + 1(1개 없음)
-    JONGSUNG_LIST = [' ', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
-    ####################################
-    r_lst = []
-
-    for w in list(korean_word.strip()):
-        if '가'<=w<='힣':
-            ch1 = (ord(w) - ord('가'))//588
-            ch2 = ((ord(w) - ord('가')) - (588*ch1)) // 28
-            ch3 = (ord(w) - ord('가')) - (588*ch1) - 28*ch2
-            r_lst.append([CHOSUNG_LIST[ch1], JUNGSUNG_LIST[ch2], JONGSUNG_LIST[ch3]])
-        else:
-            r_lst.append([w])
-    return r_lst
 
 
 class TextCNNDataset(Dataset):
@@ -57,21 +33,26 @@ class TextCNN(nn.Module):
         self.conv1 = nn.Conv2d(1, 64, (6, 127), padding=(2,0))
         self.conv2 = nn.Conv2d(64, 128, (9, 1), padding=(4,0))
         self.conv3 = nn.Conv2d(128, 256, (12, 1), padding=(6,0))
-        self.fc1 = nn.Linear(1792, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 2)
+        self.conv4 = nn.Conv2d(256, 512, (15, 1), padding=(7,0))
+        self.conv5 = nn.Conv2d(512, 1024, (18, 1), padding=(9,0))
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(128, 2)
         self.dropout = nn.Dropout(0.2)
         
     def forward(self, x):
         x = F.max_pool2d(F.relu(self.conv1(x)), (3, 1))
         x = F.max_pool2d(F.relu(self.conv2(x)), (3, 1))
         x = F.max_pool2d(F.relu(self.conv3(x)), (3, 1))
+        x = F.max_pool2d(F.relu(self.conv4(x)), (3, 1))
+        x = F.max_pool2d(F.relu(self.conv5(x)), (3, 1))
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
-        x = self.dropout(x)
         x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
         x = self.dropout(x)
-        x = self.fc3(x)
+        x = self.fc4(x)
         return x
 
 
@@ -125,7 +106,7 @@ def evaluate(model, dataloader, criterion, device):
     return average_loss, accuracy
 
 
-def trainer(X, y, epochs, batch_size):
+def trainer(X, y, epochs, batch_size, model_path=None):
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True, stratify=y)
 
     best_accuracy = 0.0
@@ -141,6 +122,9 @@ def trainer(X, y, epochs, batch_size):
 
         # 모델 인스턴스화 및 옵티마이저 설정
         model = TextCNN()
+        if model_path is not None:
+            model.load_state_dict(torch.load(model_path))
+        
         optimizer = optim.Adam(model.parameters(), lr=0.001)
         criterion = nn.CrossEntropyLoss()
         scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
@@ -177,25 +161,60 @@ def tester(X, y, model_path):
     model.to(device)
     criterion = nn.CrossEntropyLoss()
 
-    test_loss, test_accuracy = evaluate(model, test_dataloader, criterion, device)
-    print('Test loss == ', test_loss, ' Test Accuracy == ', test_accuracy)
+    model.eval()
+    total_loss = 0
+    correct_predictions = 0
+    true_labels = []
+    predicted_labels = []
+
+    with torch.no_grad():
+        with tqdm(total=len(test_dataloader), desc="Test", unit="batch") as t:
+            for data, labels in test_dataloader:
+                data = data.unsqueeze(1)
+                data, labels = data.to(device), labels.to(device)
+
+                outputs = model(data)
+                loss = criterion(outputs, labels)
+                total_loss += loss.item()
+
+                _, predicted = torch.max(outputs, dim=1)
+                correct_predictions += (predicted == labels).sum().item()
+                true_labels.extend(labels.cpu().numpy())
+                predicted_labels.extend(predicted.cpu().numpy())
+
+                t.update(1)
+
+    average_loss = total_loss / len(test_dataloader)
+    accuracy = correct_predictions / len(test_dataloader.dataset)
+    precision = precision_score(true_labels, predicted_labels)
+    recall = recall_score(true_labels, predicted_labels)
+    f1 = f1_score(true_labels, predicted_labels)
+    conf_matrix = confusion_matrix(true_labels, predicted_labels)
+
+    with open('predicted.txt', 'w') as f:
+        for label in predicted_labels:
+            f.write(f'{label}, ')
+
+    print('Test loss == ', average_loss, ' Test Accuracy == ', accuracy, ' F1 Score == ', f1, ' Prescision == ', precision, ' Recall == ', recall)
+    print('Confusion Matrix: ')
+    print(conf_matrix)
 
 
 
 if __name__ == '__main__':
-    with gzip.open('hs4.pickle', 'rb') as f:
+    with gzip.open('unsmile.pickle', 'rb') as f:
         # pickle 파일 로드
         data = pickle.load(f)
 
     X = data['onehot_vector']
     y = data['clean']
 
-    with gzip.open('hs_val.pickle', 'rb') as f:
+    with gzip.open('unsmile_val.pickle', 'rb') as f:
         test_data = pickle.load(f)
 
     test_X = data['onehot_vector']
     test_y = data['clean']
     model = './cnn_best_model_1000epoch.pth'
 
-    # trainer(X, y, 1000, 16)
-    tester(test_X, test_y, model)
+    trainer(X, y, 100, 16)
+    # tester(test_X, test_y, model)
