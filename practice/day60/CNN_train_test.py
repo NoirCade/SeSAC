@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch import nn, optim
+from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 import pandas as pd
@@ -13,9 +14,10 @@ import gzip
 
 
 class TextCNNDataset(Dataset):
-    def __init__(self, data, labels):
+    def __init__(self, data, labels, transform=None):
         self.data = data
         self.labels = labels
+        self.transform = transform
 
     def __len__(self):
         return len(self.data)
@@ -23,8 +25,13 @@ class TextCNNDataset(Dataset):
     def __getitem__(self, idx):
         dat = self.data.iloc[idx]
         dat = np.array(dat)
+        dat = dat.astype('float32')
         label = self.labels.iloc[idx]
-        return dat.astype('float32'), label
+
+        if self.transform:
+            dat = self.transform(dat)
+
+        return dat, label
 
 
 class TextCNN(nn.Module):
@@ -33,24 +40,24 @@ class TextCNN(nn.Module):
         self.conv1 = nn.Conv2d(1, 64, (6, 127), padding=(2,0))
         self.conv2 = nn.Conv2d(64, 128, (9, 1), padding=(4,0))
         self.conv3 = nn.Conv2d(128, 256, (12, 1), padding=(6,0))
-        self.fc1 = nn.Linear(1792, 448)
-        self.fc2 = nn.Linear(448, 256)
-        self.fc3 = nn.Linear(256, 128)
-        self.fc4 = nn.Linear(128, 64)
-        self.fc5 = nn.Linear(64, 2)
+        self.fc1 = nn.Linear(1792, 1024)
+        self.fc2 = nn.Linear(1024, 1024)
+        self.fc3 = nn.Linear(1024, 512)
+        self.fc4 = nn.Linear(512, 128)
+        self.fc5 = nn.Linear(128, 2)
         self.dropout = nn.Dropout(0.2)
         
     def forward(self, x):
         x = F.max_pool2d(F.relu(self.conv1(x)), (3, 1))
+        # print('conv 1 ', x.shape)
         x = F.max_pool2d(F.relu(self.conv2(x)), (3, 1))
+        # print('conv 2 ', x.shape)
         x = F.max_pool2d(F.relu(self.conv3(x)), (3, 1))
+        # print('conv 3 ', x.shape)
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
-        x = self.dropout(x)
         x = F.relu(self.fc2(x))
-        x = self.dropout(x)
         x = F.relu(self.fc3(x))
-        x = self.dropout(x)
         x = F.relu(self.fc4(x))
         x = self.dropout(x)
         x = self.fc5(x)
@@ -63,7 +70,7 @@ def train(model, dataloader, optimizer, criterion, device):
 
     with tqdm(total=len(dataloader), desc="Training", unit="batch") as t:
         for data, labels in dataloader:
-            data = data.unsqueeze(1)
+            # data = data.unsqueeze(1)
             data, labels = data.to(device), labels.to(device)
 
             optimizer.zero_grad()
@@ -89,7 +96,7 @@ def evaluate(model, dataloader, criterion, device):
     with torch.no_grad():
         with tqdm(total=len(dataloader), desc="Validation", unit="batch") as t:
             for data, labels in dataloader:
-                data = data.unsqueeze(1)
+                # data = data.unsqueeze(1)
                 data, labels = data.to(device), labels.to(device)
 
                 outputs = model(data)
@@ -115,10 +122,18 @@ def cnn_trainer(X, y, epochs, batch_size, model_path=None):
     history = {'train_loss': [], 'val_loss': [], 'val_accuracy': []}
 
     for epoch in range(epochs):
-        train_dataset = TextCNNDataset(X_train, y_train)
+        mean = 0.5
+        std = 0.5
+
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            # transforms.Normalize(mean, std)
+        ])
+        
+        train_dataset = TextCNNDataset(X_train, y_train, transform=transform)
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
 
-        val_dataset = TextCNNDataset(X_val, y_val)
+        val_dataset = TextCNNDataset(X_val, y_val, transform=transform)
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 
         # 모델 인스턴스화 및 옵티마이저 설정
@@ -154,7 +169,15 @@ def cnn_trainer(X, y, epochs, batch_size, model_path=None):
 
 
 def cnn_tester(X, y, model_path):
-    test_dataset = TextCNNDataset(X, y)
+    mean = 0.5
+    std = 0.5
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        # transforms.Normalize(mean, std)
+    ])
+    
+    test_dataset = TextCNNDataset(X, y, transform=transform)
     test_dataloader = DataLoader(test_dataset)
     model = TextCNN()
     model.load_state_dict(torch.load(model_path))
@@ -171,7 +194,7 @@ def cnn_tester(X, y, model_path):
     with torch.no_grad():
         with tqdm(total=len(test_dataloader), desc="Test", unit="batch") as t:
             for data, labels in test_dataloader:
-                data = data.unsqueeze(1)
+                # data = data.unsqueeze(1)
                 data, labels = data.to(device), labels.to(device)
 
                 outputs = model(data)
@@ -214,7 +237,7 @@ if __name__ == '__main__':
     
     label = ytrain
 
-    cnn_trainer(data, label, 100, 4)
+    cnn_trainer(data, label, 100, 16)
 
     with gzip.open('Xtest.pickle', 'rb') as f:
         Xtest = pickle.load(f)
