@@ -1,0 +1,2 @@
+Best Model Performance 
+Test loss == 0.5145029496442994, Test Accuracy == 0.7387247278382582, F1 Score == 0.699523052464229, Prescision == 0.6910090302316451, Recall == 0.7082494969818913

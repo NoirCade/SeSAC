@@ -1,0 +1,22 @@
+0.7366 model
+
+Test loss ==  0.5204660806437403  Test Accuracy ==  0.7366511145671333  F1 Score ==  0.6796973518284993  Prescision ==  0.7113946326440828  Recall ==  0.6507042253521127
+Confusion Matrix:
+[[2646  656]
+ [ 868 1617]]
+
+
+0.7378 model
+
+Test loss ==  0.5268959842320892  Test Accuracy ==  0.7378607223086228  F1 Score ==  0.6821705426356589  Prescision ==  0.7115384615384616  Recall ==  0.6551307847082495
+Confusion Matrix:
+[[2642  660]
+ [ 857 1628]]
+
+
+0.7387 model
+
+Test loss ==  0.5145029496442994  Test Accuracy ==  0.7387247278382582  F1 Score ==  0.699523052464229  Prescision ==  0.6910090302316451  Recall ==  0.7082494969818913
+Confusion Matrix:
+[[2515  787]
+ [ 725 1760]]

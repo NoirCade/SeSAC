@@ -10,6 +10,13 @@ if __name__ == '__main__':
     os.makedirs('./data', exist_ok=True)
     for y_count in range(3):
         for x_count in range(5):
-            print(y, x)
-            split = img[y*y_count:y*(y_count+1)][x*x_count:x*(x_count+1)]
-            cv2.imwrite(f'./data/imgae{count}.jpg', split)
+            if count == 12:
+                break
+
+            split = img[y*y_count:y*(y_count+1), x*x_count:x*(x_count+1)]
+            cv2.imwrite(f'./data/image_{count}.jpg', split)
+            count += 1
+
+        else:
+            continue
+        break
